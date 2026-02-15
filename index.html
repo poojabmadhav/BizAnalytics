@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Analytics Platform</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #141937;
+            --bg-tertiary: #1e2549;
+            --accent-cyan: #00d9ff;
+            --accent-purple: #a855f7;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border-color: #2d3561;
+        }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+        
+        .app-container {
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        .background-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(var(--border-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border-color) 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .header {
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 3.5em;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            letter-spacing: -2px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: 1px;
+        }
+        
+        .upload-zone {
+            background: var(--bg-secondary);
+            border: 2px dashed var(--border-color);
+            border-radius: 16px;
+            padding: 60px 40px;
+            text-align: center;
+            margin-bottom: 40px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .upload-zone:hover {
+            border-color: var(--accent-cyan);
+            background: var(--bg-tertiary);
+            transform: translateY(-2px);
+        }
+        
+        .upload-zone.dragging {
+            border-color: var(--accent-purple);
+            background: rgba(168, 85, 247, 0.1);
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.6;
+        }
+        
+        .upload-zone h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .upload-zone p {
+            color: var(--text-secondary);
+            font-size: 0.95em;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .uploaded-files {
+            margin-bottom: 30px;
+        }
+        
+        .file-tag {
+            display: inline-block;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 5px;
+            font-size: 0.85em;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-cyan);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-purple));
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 217, 255, 0.2);
+        }
+        
+        .stat-label {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 800;
+            line-height: 1;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--text-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-change {
+            font-size: 0.9em;
+            color: var(--accent-green);
+            margin-top: 10px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        @media (min-width: 1024px) {
+            .charts-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        .chart-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            position: relative;
+        }
+        
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        
+        .chart-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        
+        .chart-subtitle {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 350px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 100px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state-icon {
+            font-size: 5em;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Outfit', sans-serif;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 217, 255, 0.4);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--border-color);
+            box-shadow: 0 10px 25px rgba(45, 53, 97, 0.4);
+        }
+        
+        .action-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animated {
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        .trend-indicator {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+            margin-left: 10px;
+        }
+        
+        .trend-up {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--accent-green);
+        }
+        
+        .trend-down {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        function BookingAnalyticsPlatform() {
+            const [files, setFiles] = useState([]);
+            const [data, setData] = useState([]);
+            const [isDragging, setIsDragging] = useState(false);
+            const fileInputRef = useRef(null);
+            const revenueChartRef = useRef(null);
+            const bookingsChartRef = useRef(null);
+            const trendChartRef = useRef(null);
+            const sourceChartRef = useRef(null);
+            
+            const revenueChartInstance = useRef(null);
+            const bookingsChartInstance = useRef(null);
+            const trendChartInstance = useRef(null);
+            const sourceChartInstance = useRef(null);
+            
+            useEffect(() => {
+                // Load initial data
+                const initialData = [
+                    { month: 'Jan', bookings: 18, revenue: 9858.44 },
+                    { month: 'Feb', bookings: 19, revenue: 6485.07 },
+                    { month: 'Mar', bookings: 55, revenue: 28650.57 },
+                    { month: 'Apr', bookings: 45, revenue: 31465.56 },
+                    { month: 'May', bookings: 51, revenue: 45000.36 },
+                    { month: 'Jun', bookings: 49, revenue: 28352.12 },
+                    { month: 'Jul', bookings: 55, revenue: 36015.33 },
+                    { month: 'Aug', bookings: 35, revenue: 18917.10 },
+                    { month: 'Sep', bookings: 36, revenue: 18652.72 },
+                    { month: 'Oct', bookings: 32, revenue: 16618.74 },
+                    { month: 'Nov', bookings: 6, revenue: 9023.71 }
+                ];
+                setData(initialData);
+            }, []);
+            
+            useEffect(() => {
+                if (data.length > 0) {
+                    renderCharts();
+                }
+            }, [data]);
+            
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                setIsDragging(true);
+            };
+            
+            const handleDragLeave = () => {
+                setIsDragging(false);
+            };
+            
+            const handleDrop = (e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                const droppedFiles = Array.from(e.dataTransfer.files);
+                handleFiles(droppedFiles);
+            };
+            
+            const handleFileSelect = (e) => {
+                const selectedFiles = Array.from(e.target.files);
+                handleFiles(selectedFiles);
+            };
+            
+            const handleFiles = async (newFiles) => {
+                const xlsxFiles = newFiles.filter(f => 
+                    f.name.endsWith('.xlsx') || f.name.endsWith('.xls')
+                );
+                
+                if (xlsxFiles.length === 0) {
+                    alert('Please upload Excel files (.xlsx or .xls)');
+                    return;
+                }
+                
+                setFiles(prev => [...prev, ...xlsxFiles]);
+                
+                // Process files
+                for (const file of xlsxFiles) {
+                    await processFile(file);
+                }
+            };
+            
+            const processFile = async (file) => {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    
+                    reader.onload = (e) => {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                            
+                            // Find Grand Total row
+                            let bookings = 0;
+                            let revenue = 0;
+                            
+                            for (let i = jsonData.length - 1; i >= 0; i--) {
+                                const row = jsonData[i];
+                                if (row[0] && String(row[0]).includes('Grand Total')) {
+                                    bookings = parseInt(row[1]) || 0;
+                                    // Find revenue (typically in later columns)
+                                    for (let j = row.length - 1; j >= 0; j--) {
+                                        if (typeof row[j] === 'number' && row[j] > 100) {
+                                            revenue = row[j];
+                                            break;
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                            
+                            if (bookings > 0 && revenue > 0) {
+                                // Extract month from filename
+                                const monthMatch = file.name.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i);
+                                if (monthMatch) {
+                                    const month = monthMatch[1];
+                                    setData(prev => {
+                                        const filtered = prev.filter(d => d.month !== month);
+                                        return [...filtered, { month, bookings, revenue }].sort((a, b) => {
+                                            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                            return months.indexOf(a.month) - months.indexOf(b.month);
+                                        });
+                                    });
+                                }
+                            }
+                        } catch (err) {
+                            console.error('Error processing file:', err);
+                        }
+                        resolve();
+                    };
+                    
+                    reader.readAsArrayBuffer(file);
+                });
+            };
+            
+            const renderCharts = () => {
+                const months = data.map(d => d.month);
+                const revenues = data.map(d => d.revenue);
+                const bookings = data.map(d => d.bookings);
+                
+                // Revenue Chart
+                if (revenueChartRef.current) {
+                    if (revenueChartInstance.current) {
+                        revenueChartInstance.current.destroy();
+                    }
+                    
+                    const ctx = revenueChartRef.current.getContext('2d');
+                    revenueChartInstance.current = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: months,
+                            datasets: [{
+                                label: 'Revenue',
+                                data: revenues,
+                                backgroundColor: 'rgba(0, 217, 255, 0.7)',
+                                borderColor: 'rgba(0, 217, 255, 1)',
+                                borderWidth: 2,
+                                borderRadius: 8
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: 'rgba(10, 14, 39, 0.95)',
+                                    titleColor: '#00d9ff',
+                                    bodyColor: '#f1f5f9',
+                                    borderColor: '#2d3561',
+                                    borderWidth: 1,
+                                    padding: 12,
+                                    callbacks: {
+                                        label: (context) => `$${context.parsed.y.toLocaleString('en-US', {minimumFractionDigits: 2})}`
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: { display: false, color: '#2d3561' },
+                                    ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono' } }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { color: '#2d3561' },
+                                    ticks: { 
+                                        color: '#94a3b8',
+                                        font: { family: 'JetBrains Mono' },
+                                        callback: (value) => '$' + (value / 1000).toFixed(0) + 'K'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                // Bookings Chart
+                if (bookingsChartRef.current) {
+                    if (bookingsChartInstance.current) {
+                        bookingsChartInstance.current.destroy();
+                    }
+                    
+                    const ctx = bookingsChartRef.current.getContext('2d');
+                    bookingsChartInstance.current = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: months,
+                            datasets: [{
+                                label: 'Bookings',
+                                data: bookings,
+                                backgroundColor: 'rgba(168, 85, 247, 0.7)',
+                                borderColor: 'rgba(168, 85, 247, 1)',
+                                borderWidth: 2,
+                                borderRadius: 8
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: 'rgba(10, 14, 39, 0.95)',
+                                    titleColor: '#a855f7',
+                                    bodyColor: '#f1f5f9',
+                                    borderColor: '#2d3561',
+                                    borderWidth: 1,
+                                    padding: 12
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: { display: false },
+                                    ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono' } }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { color: '#2d3561' },
+                                    ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono' } }
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                // Trend Line Chart
+                if (trendChartRef.current) {
+                    if (trendChartInstance.current) {
+                        trendChartInstance.current.destroy();
+                    }
+                    
+                    const avgPerBooking = revenues.map((r, i) => bookings[i] > 0 ? r / bookings[i] : 0);
+                    
+                    const ctx = trendChartRef.current.getContext('2d');
+                    trendChartInstance.current = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: months,
+                            datasets: [{
+                                label: 'Revenue',
+                                data: revenues,
+                                borderColor: '#00d9ff',
+                                backgroundColor: 'rgba(0, 217, 255, 0.1)',
+                                tension: 0.4,
+                                borderWidth: 3,
+                                fill: true,
+                                yAxisID: 'y'
+                            }, {
+                                label: 'Avg per Booking',
+                                data: avgPerBooking,
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                tension: 0.4,
+                                borderWidth: 3,
+                                fill: true,
+                                yAxisID: 'y1'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    labels: { color: '#f1f5f9', font: { family: 'Outfit' } }
+                                },
+                                tooltip: {
+                                    backgroundColor: 'rgba(10, 14, 39, 0.95)',
+                                    titleColor: '#00d9ff',
+                                    bodyColor: '#f1f5f9',
+                                    borderColor: '#2d3561',
+                                    borderWidth: 1,
+                                    padding: 12
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: { color: '#2d3561' },
+                                    ticks: { color: '#94a3b8', font: { family: 'JetBrains Mono' } }
+                                },
+                                y: {
+                                    type: 'linear',
+                                    position: 'left',
+                                    beginAtZero: true,
+                                    grid: { color: '#2d3561' },
+                                    ticks: { 
+                                        color: '#94a3b8',
+                                        font: { family: 'JetBrains Mono' },
+                                        callback: (value) => '$' + (value / 1000).toFixed(0) + 'K'
+                                    }
+                                },
+                                y1: {
+                                    type: 'linear',
+                                    position: 'right',
+                                    beginAtZero: true,
+                                    grid: { display: false },
+                                    ticks: { 
+                                        color: '#94a3b8',
+                                        font: { family: 'JetBrains Mono' },
+                                        callback: (value) => '$' + value.toFixed(0)
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                // Pie Chart - Distribution
+                if (sourceChartRef.current) {
+                    if (sourceChartInstance.current) {
+                        sourceChartInstance.current.destroy();
+                    }
+                    
+                    const ctx = sourceChartRef.current.getContext('2d');
+                    sourceChartInstance.current = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: months,
+                            datasets: [{
+                                data: revenues,
+                                backgroundColor: [
+                                    '#00d9ff', '#a855f7', '#10b981', '#f59e0b',
+                                    '#ef4444', '#06b6d4', '#8b5cf6', '#84cc16',
+                                    '#f97316', '#ec4899', '#14b8a6'
+                                ],
+                                borderColor: '#0a0e27',
+                                borderWidth: 3
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: { 
+                                        color: '#f1f5f9',
+                                        font: { family: 'JetBrains Mono', size: 11 },
+                                        padding: 15
+                                    }
+                                },
+                                tooltip: {
+                                    backgroundColor: 'rgba(10, 14, 39, 0.95)',
+                                    titleColor: '#00d9ff',
+                                    bodyColor: '#f1f5f9',
+                                    borderColor: '#2d3561',
+                                    borderWidth: 1,
+                                    padding: 12,
+                                    callbacks: {
+                                        label: (context) => {
+                                            const label = context.label || '';
+                                            const value = context.parsed || 0;
+                                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                            const percentage = ((value / total) * 100).toFixed(1);
+                                            return `${label}: $${value.toLocaleString()} (${percentage}%)`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            };
+            
+            const totalRevenue = data.reduce((sum, d) => sum + d.revenue, 0);
+            const totalBookings = data.reduce((sum, d) => sum + d.bookings, 0);
+            const avgPerBooking = totalBookings > 0 ? totalRevenue / totalBookings : 0;
+            const bestMonth = data.length > 0 ? data.reduce((max, d) => d.revenue > max.revenue ? d : max, data[0]) : null;
+            
+            return (
+                <div className="app-container">
+                    <div className="background-grid"></div>
+                    
+                    <div className="content-wrapper">
+                        <div className="header animated">
+                            <h1>BOOKING ANALYTICS</h1>
+                            <p>[ REAL-TIME PERFORMANCE DASHBOARD ]</p>
+                        </div>
+                        
+                        <div 
+                            className={`upload-zone ${isDragging ? 'dragging' : ''}`}
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                            onClick={() => fileInputRef.current.click()}
+                        >
+                            <div className="upload-icon">📊</div>
+                            <h3>Upload Excel Files</h3>
+                            <p>Drag & drop your booking data here, or click to browse</p>
+                            <input 
+                                ref={fileInputRef}
+                                type="file" 
+                                multiple 
+                                accept=".xlsx,.xls"
+                                className="file-input"
+                                onChange={handleFileSelect}
+                            />
+                        </div>
+                        
+                        {files.length > 0 && (
+                            <div className="uploaded-files animated">
+                                <h4 style={{marginBottom: '15px', color: 'var(--text-secondary)'}}>Uploaded Files:</h4>
+                                {files.map((file, idx) => (
+                                    <span key={idx} className="file-tag">{file.name}</span>
+                                ))}
+                            </div>
+                        )}
+                        
+                        {data.length > 0 ? (
+                            <>
+                                <div className="stats-grid animated">
+                                    <div className="stat-card">
+                                        <div className="stat-label">Total Revenue</div>
+                                        <div className="stat-value">${(totalRevenue / 1000).toFixed(1)}K</div>
+                                        <div className="stat-change">
+                                            {data.length > 1 && `${data.length} months tracked`}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="stat-card">
+                                        <div className="stat-label">Total Bookings</div>
+                                        <div className="stat-value">{totalBookings}</div>
+                                        <div className="stat-change">
+                                            {bestMonth && `Peak: ${bestMonth.month} (${bestMonth.bookings})`}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="stat-card">
+                                        <div className="stat-label">Avg per Booking</div>
+                                        <div className="stat-value">${avgPerBooking.toFixed(0)}</div>
+                                        <div className="stat-change">
+                                            {bestMonth && `Best: ${bestMonth.month}`}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="charts-container animated">
+                                    <div className="chart-card">
+                                        <div className="chart-header">
+                                            <div>
+                                                <div className="chart-title">Monthly Revenue</div>
+                                                <div className="chart-subtitle">Total income per month</div>
+                                            </div>
+                                        </div>
+                                        <div className="chart-wrapper">
+                                            <canvas ref={revenueChartRef}></canvas>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="chart-card">
+                                        <div className="chart-header">
+                                            <div>
+                                                <div className="chart-title">Monthly Bookings</div>
+                                                <div className="chart-subtitle">Number of reservations</div>
+                                            </div>
+                                        </div>
+                                        <div className="chart-wrapper">
+                                            <canvas ref={bookingsChartRef}></canvas>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="chart-card full-width">
+                                        <div className="chart-header">
+                                            <div>
+                                                <div className="chart-title">Performance Trends</div>
+                                                <div className="chart-subtitle">Revenue & average booking value over time</div>
+                                            </div>
+                                        </div>
+                                        <div className="chart-wrapper">
+                                            <canvas ref={trendChartRef}></canvas>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="chart-card">
+                                        <div className="chart-header">
+                                            <div>
+                                                <div className="chart-title">Revenue Distribution</div>
+                                                <div className="chart-subtitle">Breakdown by month</div>
+                                            </div>
+                                        </div>
+                                        <div className="chart-wrapper">
+                                            <canvas ref={sourceChartRef}></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="empty-state">
+                                <div className="empty-state-icon">📈</div>
+                                <h3>No data yet</h3>
+                                <p>Upload your Excel files to see analytics</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+        
+        ReactDOM.render(<BookingAnalyticsPlatform />, document.getElementById('root'));
+    </script>
+</body>
+</html>
