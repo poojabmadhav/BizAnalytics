@@ -89,11 +89,13 @@
             const [data, setData] = useState([]);
             const fileInputRef = useRef(null);
             const combinedChartRef = useRef(null);
+            const bookingsChartRef = useRef(null);
             const rpuChartRef = useRef(null);
             const vehicleChartRef = useRef(null);
             const trendChartRef = useRef(null);
             
             const combinedChartInstance = useRef(null);
+            const bookingsChartInstance = useRef(null);
             const rpuChartInstance = useRef(null);
             const vehicleChartInstance = useRef(null);
             const trendChartInstance = useRef(null);
@@ -215,6 +217,7 @@
                 const months2026 = months.map(m => m + ' 2026');
                 const allMonths = [...months2025, ...months2026];
                 
+                // Revenue Chart with 2025 Actual + 2026 Projected
                 if (combinedChartRef.current) {
                     if (combinedChartInstance.current) combinedChartInstance.current.destroy();
                     const ctx = combinedChartRef.current.getContext('2d');
@@ -223,24 +226,48 @@
                         data: {
                             labels: allMonths,
                             datasets: [
-                                { label: 'Revenue 2025 (Actual)', data: [...revenues, ...Array(11).fill(null)], backgroundColor: 'rgba(255, 111, 0, 0.8)', borderColor: 'rgba(255, 111, 0, 1)', borderWidth: 2, borderRadius: 8, yAxisID: 'y' },
-                                { label: 'Revenue 2026 (Projected)', data: [...Array(11).fill(null), ...projectedRevenues], backgroundColor: 'rgba(255, 111, 0, 0.3)', borderColor: 'rgba(255, 111, 0, 0.6)', borderWidth: 2, borderRadius: 8, borderDash: [5, 5], yAxisID: 'y' },
-                                { label: 'Bookings 2025 (Actual)', data: [...bookings, ...Array(11).fill(null)], type: 'line', borderColor: '#2c3e50', backgroundColor: 'rgba(44, 62, 80, 0.1)', tension: 0.4, borderWidth: 3, fill: false, pointRadius: 5, pointBackgroundColor: '#2c3e50', pointBorderColor: '#fffcf2', pointBorderWidth: 2, yAxisID: 'y1' },
-                                { label: 'Bookings 2026 (Projected)', data: [...Array(11).fill(null), ...projectedBookings], type: 'line', borderColor: '#2c3e50', backgroundColor: 'rgba(44, 62, 80, 0.1)', tension: 0.4, borderWidth: 3, borderDash: [5, 5], fill: false, pointRadius: 5, pointBackgroundColor: '#2c3e50', pointBorderColor: '#fffcf2', pointBorderWidth: 2, yAxisID: 'y1' }
+                                { label: 'Revenue 2025 (Actual)', data: [...revenues, ...Array(11).fill(null)], backgroundColor: 'rgba(255, 111, 0, 0.8)', borderColor: 'rgba(255, 111, 0, 1)', borderWidth: 2, borderRadius: 8 },
+                                { label: 'Revenue 2026 (Projected)', data: [...Array(11).fill(null), ...projectedRevenues], backgroundColor: 'rgba(255, 111, 0, 0.3)', borderColor: 'rgba(255, 111, 0, 0.6)', borderWidth: 2, borderRadius: 8, borderDash: [5, 5] }
                             ]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            interaction: { mode: 'index', intersect: false },
                             plugins: {
                                 legend: { display: true, labels: { color: '#2c3e50', font: { family: 'Outfit' } } },
-                                tooltip: { backgroundColor: 'rgba(37, 36, 34, 0.95)', titleColor: '#ff6f00', bodyColor: '#fffcf2', borderColor: '#ccc5b9', borderWidth: 1, padding: 12, callbacks: { label: (ctx) => ctx.dataset.label.includes('Revenue') ? `${ctx.dataset.label}: $${ctx.parsed.y?.toLocaleString('en-US', {minimumFractionDigits: 2}) || 'N/A'}` : `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(0) || 'N/A'} bookings` } }
+                                tooltip: { backgroundColor: 'rgba(44, 62, 80, 0.95)', titleColor: '#ff6f00', bodyColor: '#fffcf2', borderColor: '#ffcc80', borderWidth: 1, padding: 12, callbacks: { label: (ctx) => `${ctx.dataset.label}: $${ctx.parsed.y?.toLocaleString('en-US', {minimumFractionDigits: 2}) || 'N/A'}` } }
                             },
                             scales: {
                                 x: { grid: { display: false }, ticks: { color: '#2c3e50', font: { family: 'JetBrains Mono', size: 10 }, maxRotation: 45, minRotation: 45 } },
-                                y: { type: 'linear', position: 'left', beginAtZero: true, grid: { color: '#ccc5b9' }, ticks: { color: '#2c3e50', font: { family: 'JetBrains Mono' }, callback: (value) => '$' + (value / 1000).toFixed(0) + 'K' }, title: { display: true, text: 'Revenue', color: '#ff6f00', font: { family: 'Outfit', size: 14, weight: 'bold' } } },
-                                y1: { type: 'linear', position: 'right', beginAtZero: true, grid: { display: false }, ticks: { color: '#2c3e50', font: { family: 'JetBrains Mono' } }, title: { display: true, text: 'Bookings', color: '#2c3e50', font: { family: 'Outfit', size: 14, weight: 'bold' } } }
+                                y: { beginAtZero: true, grid: { color: '#ffcc80' }, ticks: { color: '#2c3e50', font: { family: 'JetBrains Mono' }, callback: (value) => '$' + (value / 1000).toFixed(0) + 'K' }, title: { display: true, text: 'Revenue', color: '#ff6f00', font: { family: 'Outfit', size: 14, weight: 'bold' } } }
+                            }
+                        }
+                    });
+                }
+                
+                // Bookings Chart with 2025 Actual + 2026 Projected
+                if (bookingsChartRef.current) {
+                    if (bookingsChartInstance.current) bookingsChartInstance.current.destroy();
+                    const ctx = bookingsChartRef.current.getContext('2d');
+                    bookingsChartInstance.current = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: allMonths,
+                            datasets: [
+                                { label: 'Bookings 2025 (Actual)', data: [...bookings, ...Array(11).fill(null)], backgroundColor: 'rgba(44, 62, 80, 0.8)', borderColor: 'rgba(44, 62, 80, 1)', borderWidth: 2, borderRadius: 8 },
+                                { label: 'Bookings 2026 (Projected)', data: [...Array(11).fill(null), ...projectedBookings], backgroundColor: 'rgba(44, 62, 80, 0.3)', borderColor: 'rgba(44, 62, 80, 0.6)', borderWidth: 2, borderRadius: 8, borderDash: [5, 5] }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: true, labels: { color: '#2c3e50', font: { family: 'Outfit' } } },
+                                tooltip: { backgroundColor: 'rgba(44, 62, 80, 0.95)', titleColor: '#ff6f00', bodyColor: '#fffcf2', borderColor: '#ffcc80', borderWidth: 1, padding: 12, callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(0) || 'N/A'} bookings` } }
+                            },
+                            scales: {
+                                x: { grid: { display: false }, ticks: { color: '#2c3e50', font: { family: 'JetBrains Mono', size: 10 }, maxRotation: 45, minRotation: 45 } },
+                                y: { beginAtZero: true, grid: { color: '#ffcc80' }, ticks: { color: '#2c3e50', font: { family: 'JetBrains Mono' } }, title: { display: true, text: 'Bookings', color: '#2c3e50', font: { family: 'Outfit', size: 14, weight: 'bold' } } }
                             }
                         }
                     });
@@ -342,15 +369,24 @@
                                     </div>
                                 </div>
                                 
-                                <div className="charts-container animated">
-                                    <div className="chart-card full-width">
+                                <div className="charts-container two-col animated">
+                                    <div className="chart-card">
                                         <div className="chart-header">
                                             <div>
-                                                <div className="chart-title">Revenue & Bookings: 2025 Actual + 2026 Projected</div>
-                                                <div className="chart-subtitle">Month-over-month performance with linear projections</div>
+                                                <div className="chart-title">Monthly Revenue: 2025 + 2026</div>
+                                                <div className="chart-subtitle">Actual performance & projected growth</div>
                                             </div>
                                         </div>
                                         <div className="chart-wrapper"><canvas ref={combinedChartRef}></canvas></div>
+                                    </div>
+                                    <div className="chart-card">
+                                        <div className="chart-header">
+                                            <div>
+                                                <div className="chart-title">Monthly Bookings: 2025 + 2026</div>
+                                                <div className="chart-subtitle">Actual performance & projected volume</div>
+                                            </div>
+                                        </div>
+                                        <div className="chart-wrapper"><canvas ref={bookingsChartRef}></canvas></div>
                                     </div>
                                 </div>
                                 
